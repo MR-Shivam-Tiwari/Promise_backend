@@ -30,11 +30,11 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 const corsOptions = {
   origin: '*', // Change '*' to a specific origin or list of origins allowed to access your server
   credential: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify HTTP methods allowed
+  methods: ['GET', 'POST', 'PUT', 'DELETE',"OPTIONS","PATCH"], // Specify HTTP methods allowed
   allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
   optionsSuccessStatus: 200, // Return successful status code for preflight requests
 };
-
+app.options("", cors(corsOptions))
 app.use(cors(corsOptions));
 
 // Routes
