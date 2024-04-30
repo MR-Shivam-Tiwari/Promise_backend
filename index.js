@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // Import the cors package
+const cors = require('cors');
 const UserR = require('./Routes/UserR');
 const Signinroutes = require('./Routes/Signinroutes');
 const AddTask = require('./Routes/AddTask');
@@ -18,7 +18,10 @@ mongoose.connect('mongodb+srv://Promise:Promise@cluster0.iufeasi.mongodb.net/?re
   useUnifiedTopology: true
 })
 .then(() => console.log("Database connected successfully"))
-.catch(err => console.error("Database connection error", err));
+.catch(err => {
+    console.error("Database connection error", err);
+    process.exit(1); // Exit the process if connection fails
+});
 
 // Middleware
 app.use(express.json({ limit: "100mb" }));
@@ -35,6 +38,12 @@ app.use('/api', TaskGroup);
 app.use('/api', TGroupR);
 app.use('/api', ForgetPassword);
 app.use('/api', ResetPassword);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+});
 
 // Start the server
 app.listen(PORT, () => {

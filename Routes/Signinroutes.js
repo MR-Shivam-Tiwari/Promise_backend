@@ -1,29 +1,22 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Register = require('../modules/UserSchema');
 const Router = express.Router();
-const Signin = require('../modules/Signin');
-const bcrypt = require('bcrypt');
-const secretKey = 'mytestsecretkey'
-
-// Replace 'your-generated-secret-key' with the key generated using the provided script
-
+const secretKey = 'mytestsecretkey';
 
 Router.post('/signin', async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
     // Check if the user exists
     const user = await Register.findOne({ email });
-
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Check if the password is correct
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid password' });
     }
@@ -31,12 +24,13 @@ Router.post('/signin', async (req, res) => {
     // Create a JSON Web Token (JWT)
     const token = jwt.sign(
       { userId: user._id, email: user.email },
-      secretKey    );
-      // console.log(token);
+      secretKey,
+      { expiresIn: '1h' } // Token expires in 1 hour
+    );
 
-      res.status(200).json({ userId: user._id, token });
-      } catch (error) {
-    console.error(error);
+    res.status(200).json({ userId: user._id, token });
+  } catch (error) {
+    console.error('Sign-in error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

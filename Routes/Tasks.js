@@ -2,19 +2,22 @@ const express = require("express");
 const Task = require("../modules/TaskSchema");
 const app = express.Router();
 
+// Get all tasks
 app.get("/tasks", async (req, res) => {
   try {
     const taskGroups = await Task.find().sort({ createdAt: -1 });
     res.json(taskGroups);
   } catch (error) {
-    console.error("Error fetching task groups:", error.message);
+    console.error("Error fetching tasks:", error.message);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// Update task status by taskId
 app.put("/tasks/:taskId", async (req, res) => {
   try {
-    const taskId = req.params.taskId;
-    const newStatus = req.body.status;
+    const { taskId } = req.params;
+    const { status: newStatus } = req.body;
 
     const updatedTask = await Task.findByIdAndUpdate(
       taskId,
@@ -25,77 +28,64 @@ app.put("/tasks/:taskId", async (req, res) => {
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }
-    const taskGroups = await Task.find().sort({ createdAt: -1 });
-    res.json(taskGroups);
+
+    const updatedTaskGroups = await Task.find().sort({ createdAt: -1 });
+    res.json(updatedTaskGroups);
   } catch (error) {
-    console.error(error);
+    console.error("Error updating task status:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
+// Count completed tasks for a user
 app.get("/countCompletedTasks/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    // console.log(userId, "userid");
 
     if (!userId) {
       return res.status(400).json({ message: "UserId is required" });
     }
 
-
-
     const completedCountQuery = {
-      people: { $elemMatch: { userId: userId } },
+      "people.userId": userId,
       status: "Completed",
     };
 
-    const totalCountQuery = {
-      people: { $elemMatch: { userId: userId } },
-    };
+    const totalCountQuery = { "people.userId": userId };
 
-    // Count tasks where status is 'Completed' for the given userId within the people array
     const completedCount = await Task.countDocuments(completedCountQuery);
-
-    // Count total tasks for the given userId within the people array
     const totalCount = await Task.countDocuments(totalCountQuery);
 
-    // Return both counts in the response
     res.json({ completedCount, totalCount });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching counts", error: error.message });
+    console.error("Error fetching completed task count:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
+// Count tasks by group
 app.get("/countTasksByGroup/:taskGroupName", async (req, res) => {
   try {
-    // Get the task group name from path parameters
     const { taskGroupName } = req.params;
 
-    // Count tasks where status is 'Completed' and belongs to the specific task group
     const completedCount = await Task.countDocuments({
       taskGroup: taskGroupName,
       status: "Completed",
     });
 
-    // Count total tasks in the specific task group
-    const totalCount = await Task.countDocuments({
-      taskGroup: taskGroupName,
-    });
+    const totalCount = await Task.countDocuments({ taskGroup: taskGroupName });
 
-    // Return both counts in the response
     res.json({ completedCount, totalCount });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching counts", error: error.message });
+    console.error("Error fetching task count by group:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
+// Update task category by taskId
 app.put("/category/:taskId", async (req, res) => {
   try {
-    const taskId = req.params.taskId;
+    const { taskId } = req.params;
     const { categoryAction, remark } = req.body;
 
     let status;
@@ -122,11 +112,9 @@ app.put("/category/:taskId", async (req, res) => {
 
     res.json(updatedTask);
   } catch (error) {
-    console.error(error);
+    console.error("Error updating task category:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
-
 
 module.exports = app;

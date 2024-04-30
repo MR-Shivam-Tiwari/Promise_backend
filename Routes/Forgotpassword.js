@@ -3,8 +3,6 @@ const router = express.Router();
 const UserSchema = require('../modules/UserSchema'); // Replace with your actual User model
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
-const dotenv = require('dotenv');
-dotenv.config();
 
 // Function to generate a random 6-digit OTP
 const generateOTP = () => {
@@ -32,10 +30,10 @@ const sendOTPEmail = async (email, otp) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    // console.log('Reset OTP sent successfully');
+    console.log('Reset OTP sent successfully');
   } catch (error) {
     console.error('Error sending reset OTP:', error);
-    throw error;
+    throw new Error('Error sending reset OTP');
   }
 };
 
@@ -57,7 +55,6 @@ router.post('/reset-password', async (req, res) => {
 
     // Save OTP in user document
     user.resetOTP = otp;
-    // user.resetOTPExpiration = Date.now() + 3600000; // Set OTP expiration time to 1 hour
     await user.save();
 
     // Send OTP to user's email

@@ -30,8 +30,7 @@ if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
 
-app.post("/tasks", upload.single('pdfFile'), async (req, res) => {
-  console.log('reqst file', req.file)
+app.post("/tasks", upload.single('pdfFile'), async (req, res, next) => {
   try {
     const {
       owner,
@@ -44,13 +43,13 @@ app.post("/tasks", upload.single('pdfFile'), async (req, res) => {
       endDate,
       reminder,
     } = req.body;
-    // console.log(req.file,"data")
-    const ownerId = owner.id; // Extracting owner id
+
+    const ownerId = owner.id;
     const ownerName = owner.name;
     const pdfFilePath = req.file ? req.file.path : null;
-    // const audio = req.file ? req.file.path : null;
+
     const newTask = new Task({
-      owner, // Assigning owner id as a string
+      owner,
       taskGroup,
       taskName,
       description,
@@ -63,9 +62,7 @@ app.post("/tasks", upload.single('pdfFile'), async (req, res) => {
       createdAt: new Date(),
     });
 
-    // Use the asynchronous function to add the taskz
     let taskNew = await newTask.save();
-    // console.log("task",taskNew);
     const taskId = taskNew._id;
 
     for (const assignedUser of people) {
@@ -75,10 +72,10 @@ app.post("/tasks", upload.single('pdfFile'), async (req, res) => {
         title: `${ownerName} assigning task to you`,
         description: `New task: ${taskName}`,
         status: "pending",
-        userid: userId, // Assign user id to userid
+        userid: userId,
         owner: {
-          id: ownerId, // Correctly assign ownerId to id
-          name: ownerName, // Correctly assign ownerName to name
+          id: ownerId,
+          name: ownerName,
         },
         taskId: taskId,
         created: new Date(),
@@ -91,29 +88,26 @@ app.post("/tasks", upload.single('pdfFile'), async (req, res) => {
   } catch (error) {
     console.error("Error adding task:", error);
     res.status(500).json({ error: "Internal Server Error" });
+    next(error);
   }
 });
 
-app.post("/notifications/reply", async (req, res) => {
+app.post("/notifications/reply", async (req, res, next) => {
   try {
     const { userId, taskId, status, comment } = req.body;
 
-    // Retrieve the task information to get ownerName and taskName
     const user = await UserSchema.findById(userId);
 
-    // Fetch task information
     const task = await Task.findById(taskId);
     const taskName = task.taskName;
     const ownerId = task.owner.id;
 
-    // Construct description with optional comment
     let description = `Task: ${taskName}`;
     if (comment) {
-      description += `\nComment: ${comment}`; // Append comment to the description
+      description += `\nComment: ${comment}`;
     }
 
     let title;
-    // console.log(status,"status")
     switch (status) {
       case "Accepted":
         title = `${user.name} accepted the task`;
@@ -125,52 +119,44 @@ app.post("/notifications/reply", async (req, res) => {
         title = `${user.name} accepted and  modified the task`;
         break;
       default:
-        title = `${user.name} responded to the task`; // Default title
+        title = `${user.name} responded to the task`;
     }
-
 
     const newNotification = new Notification({
       title: title,
-      description: description, // Use constructed description including the comment
+      description: description,
       status: status,
-      userid: ownerId, // Send the notification to the task owner
+      userid: ownerId,
       owner: user.name,
       taskId: taskId,
       created: new Date(),
     });
 
     await newNotification.save();
-    // console.log(newNotification,"noti")
-
-    res.status(201).json({ message: "Reply sent successfully", comment: comment }); // Include comment in response
+    res.status(201).json({ message: "Reply sent successfully", comment: comment });
   } catch (error) {
     console.error("Error replying to task notification:", error);
     res.status(500).json({ error: "Internal Server Error" });
+    next(error);
   }
 });
 
-
-app.get("/notifications/:userId", async (req, res) => {
+app.get("/notifications/:userId", async (req, res, next) => {
   try {
     const userId = req.params.userId;
-
-    // Use the 'find' method to get notifications for a particular user
     const userNotifications = await Notification.find({ userid: userId });
-
-    // Send the retrieved notifications as a JSON response
     res.json(userNotifications);
-    // console.log(userNotifications,"user")
   } catch (error) {
     console.error("Error retrieving user notifications:", error);
     res.status(500).json({ error: "Internal Server Error" });
+    next(error);
   }
 });
 
-app.put('/tasks/update/:taskId', async (req, res) => {
-  
+app.put('/tasks/update/:taskId', async (req, res, next) => {
   try {
     const { taskId } = req.params;
-    const updates = req.body; // Contains task updates and optionally comments
+    const updates = req.body;
 
     const task = await Task.findByIdAndUpdate(taskId, updates, { new: true });
     if (!task) {
@@ -178,24 +164,18 @@ app.put('/tasks/update/:taskId', async (req, res) => {
     }
 
     res.status(200).send(task);
-  //  console.log(task,'updatetsak') 
   } catch (error) {
     console.error('Error updating task:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+    next(error);
   }
 });
 
-
-
-
-
-
-app.put('/notifications/:taskid', async (req, res) => {
-  const { id } = req.params; // Get the ID of the notification to update
-  const { title, description, status, owner, taskId } = req.body; // Extract updated fields from request body
+app.put('/notifications/:id', async (req, res, next) => {
+  const { id } = req.params;
+  const { title, description, status, owner, taskId } = req.body;
 
   try {
-    // Find the notification by ID and update it
     const notification = await Notification.findByIdAndUpdate(id, {
       $set: {
         title,
@@ -210,35 +190,18 @@ app.put('/notifications/:taskid', async (req, res) => {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
-    res.json(notification); // Return the updated notification
+    res.json(notification);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
+    next(error);
   }
 });
 
-// app.put('/updatetasks/:id', async (req, res) => {
-//   const { id } = req.params;
-//   const { startDate, endDate, reminder, comment } = req.body;
-
-//   try {
-//     const updatedTask = await Task.findByIdAndUpdate(id, {
-//       $set: {
-//         startDate,
-//         endDate,
-//         reminder,
-//         comment
-//       }
-//     }, { new: true }); // { new: true } option returns the document after update
-
-//     if (!updatedTask) {
-//       return res.status(404).send('Task not found');
-//     }
-
-//     res.send(updatedTask);
-//   } catch (error) {
-//     res.status(400).send('Error updating task: ' + error.message);
-//   }
-// });
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+});
 
 module.exports = app;
