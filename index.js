@@ -27,8 +27,14 @@ mongoose.connect('mongodb+srv://Promise:Promise@cluster0.iufeasi.mongodb.net/?re
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
-// Use cors middleware to enable CORS
-app.use(cors());
+const corsOptions = {
+  origin: '*', // Change '*' to a specific origin or list of origins allowed to access your server
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify HTTP methods allowed
+  allowedHeaders: ['Content-Type', 'Authorization'], // Specify allowed headers
+  optionsSuccessStatus: 200, // Return successful status code for preflight requests
+};
+
+app.use(cors(corsOptions));
 
 // Routes
 app.use('/api', UserR);
